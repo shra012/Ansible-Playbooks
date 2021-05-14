@@ -1,0 +1,4 @@
+---
+create_containers: 1
+default_container_name: docker-example
+default_container_image: hello-world
