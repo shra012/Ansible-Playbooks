@@ -1,0 +1,4 @@
+.vagrant
+.vscode
+provision/playbook.retry
+.DS_Store

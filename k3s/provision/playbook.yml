@@ -1,0 +1,66 @@
+#################################################
+# Custom k3s in vagrant playbook.
+#################################################
+---
+- hosts: all
+  become: true
+  vars_files:
+    - vars/default.yml
+  
+  tasks:
+  - name: Install aptitude using apt
+    apt: 
+      name: aptitude 
+      state: present
+      update_cache: yes 
+      force_apt_get: yes
+  - name: Install required system packages
+    apt: 
+      name: "{{ item }}"
+      state: present
+      update_cache: yes
+    loop: 
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+      - python3-pip
+      - virtualenv
+      - python3-setuptools
+  - name: Download k3s installer
+    get_url: 
+      url: https://get.k3s.io 
+      mode: 700
+      dest: /tmp/k3s.sh
+  - name: Install k3s on the machine
+    shell: /tmp/k3s.sh
+  - name: Remove k3s installer
+    file:
+      path: /tmp/k3s.sh
+      state: absent
+  - name: Create the .kube directory under vagrant user home
+    file:
+      path: /home/vagrant/.kube
+      state: directory
+      owner: vagrant
+      group: vagrant
+      mode: '0755'
+  - name: Copy k3s.yaml file to user .kube folder
+    copy:
+      remote_src: yes
+      src: /etc/rancher/k3s/k3s.yaml
+      dest: /home/vagrant/.kube/config
+      owner: vagrant
+      group: vagrant
+      mode: '0644'
+  - name: Check if the KUBECONFIG exists in .profile
+    shell: grep -c "KUBECONFIG" /home/vagrant/.profile || true
+    register: kube_config_exists
+  - name: Add to KUBECONFIG export
+    lineinfile:
+      path: /home/vagrant/.profile
+      line: |-
+            
+            # Export statements added by ansible
+            export KUBECONFIG=/home/vagrant/.kube/config
+    when: kube_config_exists.stdout == "0"
